@@ -1,0 +1,72 @@
+# One client's Worker with scanning added: the core client config plus an R2
+# bucket for the originals. `npm run dev` runs it as it is (wrangler's local
+# D1, KV and R2, with .dev.vars on top). To deploy, fill in the ids, the domain
+# and the Access settings, then see README.md.
+
+name = "lab-document-scanning"
+main = "src/worker.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# No workers.dev or preview URLs: the custom domain behind Access is the only way in.
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "scan.harbour.example", custom_domain = true }]
+
+# Its own port, so it can run beside the other labs (pwa-shell is on 8787). And
+# localhost as the host: without it wrangler dev hands the Worker the route's
+# host, and the dev sign-in (localhost only) refuses it.
+[dev]
+port = 8788
+host = "localhost"
+
+[observability]
+enabled = true
+
+[triggers]
+crons = ["0 22 * * 1-5", "0 * * * *", "0 23 1 * *", "*/15 * * * *"]
+
+[vars]
+CLIENT_ID = "harbour-plumbing"
+BUSINESS_NAME = "Harbour Plumbing"
+SIGN_OFF = "Cheers,\\nDan"
+PUBLIC_URL = "https://scan.harbour.example"
+APPROVERS = "dan@harbour.example"
+OWNER_EMAIL = "dan@harbour.example"
+FROM_EMAIL = "office@harbour.example"
+# The Cloudflare Access app in front of PUBLIC_URL (Zero Trust > Access > Applications).
+ACCESS_TEAM = "<your team name>"
+ACCESS_AUD = "<Access application AUD tag>"
+# Every AI call goes through this AI Gateway. Unset, it's "default", which Cloudflare makes on the first call.
+# AI_GATEWAY_ID = "harbour-plumbing"
+# Add Xero (XERO_TENANT_ID here, XERO_CLIENT_ID and XERO_CLIENT_SECRET as secrets) and
+# bills go to the owner for approval, then into Xero as drafts. Without it, bills are filed
+# like everything else.
+# XERO_TENANT_ID = "<Xero organisation id>"
+# XERO_GRANT = "client_credentials"
+ENVIRONMENT = "production"
+
+# Workers AI reads the photos. It always runs on Cloudflare, so wrangler dev needs `wrangler login`.
+[ai]
+binding = "AI"
+remote = true
+
+[[kv_namespaces]]
+binding = "KV"
+id = "<kv id>"                                    # wrangler kv namespace create lab-document-scanning
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lab-document-scanning"           # wrangler d1 create lab-document-scanning --location oc
+database_id = "<d1 id>"
+
+[[r2_buckets]]
+binding = "SCANS"
+bucket_name = "lab-document-scanning-scans"       # wrangler r2 bucket create lab-document-scanning-scans --location oc
+
+[[send_email]]
+name = "EMAIL"
+
+# Secrets (wrangler secret put <NAME>): KEYRING, SIGNING_KEY, OPS_SLACK_WEBHOOK_URL,
+# and XERO_CLIENT_ID, XERO_CLIENT_SECRET with Xero. For wrangler dev they're in
+# .dev.vars instead (npm run dev:secrets).

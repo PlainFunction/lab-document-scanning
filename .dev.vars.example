@@ -1,0 +1,17 @@
+# For wrangler dev. Copy to .dev.vars (gitignored), or run `npm run dev:secrets`
+# to write .dev.vars with all of these made for you. Deployed, KEYRING and
+# SIGNING_KEY are Worker secrets (wrangler secret put <NAME>) and the rest are
+# the vars in wrangler.toml.
+
+# Seals cached text and pending approvals. 32 random bytes, base64.
+KEYRING={"current":"k1","keys":{"k1":"<32 random bytes, base64>"}}
+# Signs approval links. At least 32 random characters.
+SIGNING_KEY=
+
+# The dev stand-ins in src/dev.ts: you're signed in as OWNER_EMAIL on localhost,
+# and notices (approval links) and approved bills go to the terminal.
+ENVIRONMENT=development
+PUBLIC_URL=http://localhost:8788
+
+# Optional: a Slack webhook for failure alerts. Without it they go to the terminal too.
+# OPS_SLACK_WEBHOOK_URL=

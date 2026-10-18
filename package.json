@@ -1,0 +1,32 @@
+{
+  "name": "lab-document-scanning",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lab 005: scan paperwork on a phone, read it with Workers AI, file the original and send bills to the owner for approval. Built on Plain Function's capabilities.",
+  "imports": {
+    "#capabilities": "./capabilities/index.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml",
+    "dev:secrets": "node scripts/dev-secrets.mjs",
+    "db:local": "wrangler d1 execute lab-document-scanning --local --config wrangler.toml --file capabilities/core/schema.sql",
+    "db:remote": "wrangler d1 execute lab-document-scanning --remote --config wrangler.toml --file capabilities/core/schema.sql",
+    "deploy": "wrangler deploy --config wrangler.toml",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "postal-mime": "2.7.6",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.18.6",
+    "@cloudflare/workers-types": "4.20260702.1",
+    "@types/node": "24.13.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.107.0"
+  }
+}

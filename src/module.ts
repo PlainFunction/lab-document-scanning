@@ -29,7 +29,7 @@ export class ScanningModule extends CoreModule {
 
   protected records(c: Registry) {
     super.records(c)
-    c.bind(ScanStore, () => new R2ScanStore(this.env.SCANS))
+    c.bind(ScanStore, c => new R2ScanStore(this.env.SCANS, c.get(Cipher)))
   }
 
   protected ai(c: Registry) {

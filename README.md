@@ -40,8 +40,13 @@ local copies, in `.wrangler/`.
    npx wrangler kv namespace create lab-document-scanning
    npx wrangler d1 create lab-document-scanning --location oc
    npx wrangler r2 bucket create lab-document-scanning-scans --location oc
+   npx wrangler r2 bucket lifecycle add lab-document-scanning-scans expire-scans scans/ --expire-days 2557
    npm run db:remote
    ```
+   The lifecycle rule deletes each original seven years after it was scanned.
+   The ATO wants records kept five years from when the return is lodged, so
+   seven covers a receipt from the start of a financial year. Pick what suits
+   the business, but pick something: a scan kept forever is a scan that can leak forever.
 2. Pick the address (`routes` and `PUBLIC_URL`) and put a Cloudflare Access
    application in front of it (Zero Trust, Access, Applications). Its team name
    and AUD tag go in `ACCESS_TEAM` and `ACCESS_AUD`. There are no workers.dev
@@ -57,6 +62,23 @@ local copies, in `.wrangler/`.
 
 `ENVIRONMENT` stays `production` in `wrangler.toml`. Even if it were set to
 `development` there, the dev sign-in refuses anything that isn't localhost.
+
+## Switching it off
+
+`npm run off -- --remote` stops it without a deploy: pages say nothing was done,
+email to it is refused so the sender knows, and the reminders, health checks and
+monthly note stop. Approvals still expire. `npm run on -- --remote` starts it
+again. It's a KV key, so it can take a minute to reach everywhere.
+
+## If a key leaks
+
+Switch it off first, then replace the one that leaked:
+
+- **`KEYRING`**: add a new key to the JSON, point `current` at it, and `wrangler secret put KEYRING --config wrangler.toml`. New data is sealed with the new key and old data still opens. Anything sealed before then stays under the old key until it's sealed again, so drop the old key once that data has expired.
+- **`SIGNING_KEY`**: a new random one. Approval links already sent stop working, so the owner gets new ones the next time each is asked.
+- **`OPS_SLACK_WEBHOOK_URL`**: delete the webhook in Slack, make a new one, put it.
+- **`XERO_CLIENT_SECRET`**: make a new secret for the app at developer.xero.com, put it. The app only asks for invoices and bills (`accounting.transactions`) and reading contacts.
+- **The bucket**: originals and their records are sealed with `KEYRING`, so a leaked R2 token reads nothing without it.
 
 ## What it uses from capabilities
 

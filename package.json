@@ -15,7 +15,9 @@
     "deploy": "wrangler deploy --config wrangler.toml",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "off": "wrangler kv key put off-switch on --binding KV --config wrangler.toml",
+    "on": "wrangler kv key delete off-switch --binding KV --config wrangler.toml"
   },
   "dependencies": {
     "postal-mime": "2.7.6",

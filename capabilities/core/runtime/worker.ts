@@ -3,6 +3,7 @@ import type { Registry, Module } from '../kernel/registry'
 import { CapabilityError, ConflictError, NotAllowedError, ValidationError } from '../kernel/errors'
 import { Logger } from '../kernel/logger'
 import { utf8 } from '../kernel/encoding'
+import { SWITCHED_OFF, kvOf, switchedOff } from '../kernel/off-switch'
 import { IdentityVerifier, type Principal } from '../security/identity'
 import { ApprovalGate } from '../approvals/approval-gate'
 import { PushSubscriptionStore } from '../channels/web-push'
@@ -93,7 +94,9 @@ export function createWorker<E extends object>(opts: WorkerOptions<E>): Exported
         let res: Response
         try {
           const who = await c.get(IdentityVerifier).verify(request)
-          res = await route(request, c, who)
+          res = await switchedOff(kvOf(env))
+            ? new Response(messagePage('Switched off', SWITCHED_OFF), { status: 503, headers: SECURE_HEADERS })
+            : await route(request, c, who)
         } catch (err) {
           res = errorResponse(err, c)
           if (res.status >= 500) span?.recordError(err)
@@ -105,7 +108,9 @@ export function createWorker<E extends object>(opts: WorkerOptions<E>): Exported
 
     async scheduled(controller, env, ctx) {
       const c = registryFor(env)
-      const tasks = crons[controller.cron] ?? []
+      // Switched off, only housekeeping that forgets things runs.
+      const off = await switchedOff(kvOf(env))
+      const tasks = (crons[controller.cron] ?? []).filter(t => !off || t === 'expire')
       await traced(c, ctx, `cron ${controller.cron}`, { kind: 'server', attrs: { 'faas.trigger': 'timer', 'faas.cron': controller.cron } }, async () => {
         const log = c.get(Logger)
         for (const task of tasks) {
@@ -128,6 +133,7 @@ export function createWorker<E extends object>(opts: WorkerOptions<E>): Exported
       const c = registryFor(env)
       await traced(c, ctx, 'email receive', { kind: 'server', attrs: { 'faas.trigger': 'other', 'pf.email.size': message.rawSize } }, async span => {
         const log = c.get(Logger)
+        if (await switchedOff(kvOf(env))) { span?.setAttribute('pf.email.route', 'switched-off'); message.setReject('Switched off for now: nothing was done with this email. Please send it again later or contact the business directly.'); return }
         if (message.rawSize > MAX_EMAIL_BYTES) { span?.setAttribute('pf.email.route', 'too-large'); message.setReject('Message too large'); return }
         const parsed = await PostalMime.parse(message.raw)
         const local = message.to.split('@')[0].toLowerCase()
